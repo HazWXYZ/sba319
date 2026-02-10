@@ -1,6 +1,4 @@
-# Sample Data Structure
 
-This file shows what the data looks like in the database. The actual MongoDB database will have ObjectIds instead of the placeholder IDs shown here.
 
 ## Exercises Collection (10 documents)
 

@@ -15,7 +15,7 @@ npm install
 ```bash
 cp .env.example .env
 ```
-Edit `.env` if you need different MongoDB connection settings.
+Edit `.env` with your connection string.
 
 
 3. **Start the server**
