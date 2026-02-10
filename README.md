@@ -3,6 +3,28 @@ Hello Constance or Dylan,
 
 This is simple fitness tracking application. It tracks exercises, create workout routines, and logs your progress over time.
 
+### Setup
+
+
+1. **Install dependencies**
+```bash
+npm install
+```
+
+2. **Configure environment**
+```bash
+cp .env.example .env
+```
+Edit `.env` if you need different MongoDB connection settings.
+
+
+3. **Start the server**
+```bash
+npm start
+```
+
+
+
 ## Features
 
 - **Exercise Database**: Store and manage various exercises with categories and muscle groups
@@ -80,25 +102,20 @@ Log entries for completed workouts.
 
 ### Setup
 
-1. **Clone the repository**
-```bash
-git clone <your-repo-url>
-cd workout-tracker
-```
 
-2. **Install dependencies**
+1. **Install dependencies**
 ```bash
 npm install
 ```
 
-3. **Configure environment**
+2. **Configure environment**
 ```bash
 cp .env.example .env
 ```
 Edit `.env` if you need different MongoDB connection settings.
 
 
-4. **Start the server**
+3. **Start the server**
 ```bash
 npm start
 ```
