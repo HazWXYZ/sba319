@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Progress - Workout Tracker</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container">
+            <h1 class="logo">Workout Tracker</h1>
+            <ul class="nav-links">
+                <li><a href="index.html">Home</a></li>
+                <li><a href="exercises.html">Exercises</a></li>
+                <li><a href="workouts.html">Workouts</a></li>
+                <li><a href="progress.html" class="active">Progress</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="page-header">
+            <h2>Workout Progress</h2>
+            <button class="btn btn-primary" onclick="showLogForm()">+ Log Workout</button>
+        </div>
+
+        <!-- Log Workout Form -->
+        <div id="logWorkoutForm" class="form-modal" style="display: none;">
+            <div class="form-content">
+                <h3>Log Workout Session</h3>
+                <form onsubmit="logWorkout(event)">
+                    <div class="form-group">
+                        <label>Select Workout *</label>
+                        <select id="progressWorkout" required>
+                            <option value="">Loading workouts...</option>
+                        </select>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Duration (minutes) *</label>
+                            <input type="number" id="progressDuration" min="1" max="300" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Calories Burned</label>
+                            <input type="number" id="progressCalories" min="0" value="0">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Date</label>
+                        <input type="date" id="progressDate" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Rating (1-5) *</label>
+                        <div class="rating-buttons">
+                            <button type="button" class="rating-btn" onclick="setRating(1)">1⭐</button>
+                            <button type="button" class="rating-btn" onclick="setRating(2)">2⭐</button>
+                            <button type="button" class="rating-btn" onclick="setRating(3)">3⭐</button>
+                            <button type="button" class="rating-btn" onclick="setRating(4)">4⭐</button>
+                            <button type="button" class="rating-btn" onclick="setRating(5)">5⭐</button>
+                        </div>
+                        <input type="hidden" id="progressRating" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Notes</label>
+                        <textarea id="progressNotes" rows="3" maxlength="500" placeholder="How did it go?"></textarea>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-secondary" onclick="hideLogForm()">Cancel</button>
+                        <button type="submit" class="btn btn-success">Log Workout</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div id="progressList" class="progress-list">
+            <p class="loading">Loading progress...</p>
+        </div>
+    </div>
+
+
+    <script src="app.js"></script>
+    <script>
+        let selectedRating = 0;
+
+        async function loadWorkoutsForDropdown() {
+            try {
+                const response = await fetch('/api/workouts');
+                const data = await response.json();
+                const select = document.getElementById('progressWorkout');
+                
+                select.innerHTML = '<option value="">Select a workout...</option>';
+                data.data.forEach(w => {
+                    select.innerHTML += `<option value="${w._id}">${w.name}</option>`;
+                });
+            } catch (error) {
+                console.error('Error loading workouts:', error);
+            }
+        }
+
+        async function loadProgress() {
+            try {
+                const response = await fetch('/api/progress');
+                const data = await response.json();
+                displayProgress(data.data || []);
+            } catch (error) {
+                document.getElementById('progressList').innerHTML = 
+                    '<p class="error">Error loading progress.</p>';
+            }
+        }
+
+        function displayProgress(progressLogs) {
+            const list = document.getElementById('progressList');
+            
+            if (progressLogs.length === 0) {
+                list.innerHTML = '<p>No workouts logged yet. Start tracking your progress!</p>';
+                return;
+            }
+
+            list.innerHTML = progressLogs.map(p => {
+                const date = new Date(p.date).toLocaleDateString('en-US', {
+                    weekday: 'short',
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric'
+                });
+                const workoutName = p.workoutId?.name || 'Workout';
+                const stars = '⭐'.repeat(p.rating);
+                
+                return `
+                    <div class="progress-card">
+                        <div class="progress-header">
+                            <div>
+                                <h3>${workoutName}</h3>
+                                <span class="date">${date}</span>
+                            </div>
+                            <div class="progress-stats">
+                                <span class="badge">${p.duration} min</span>
+                                ${p.caloriesBurned > 0 ? `<span class="badge badge-success">${p.caloriesBurned} cal</span>` : ''}
+                            </div>
+                        </div>
+                        <div class="rating">${stars}</div>
+                        ${p.notes ? `<p class="notes">${p.notes}</p>` : ''}
+                        <button class="btn btn-danger btn-sm" onclick="deleteProgress('${p._id}')">Delete</button>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function showLogForm() {
+            loadWorkoutsForDropdown();
+            // Set today's date as default
+            document.getElementById('progressDate').valueAsDate = new Date();
+            document.getElementById('logWorkoutForm').style.display = 'flex';
+        }
+
+        function hideLogForm() {
+            document.getElementById('logWorkoutForm').style.display = 'none';
+            document.querySelector('form').reset();
+            selectedRating = 0;
+            // Reset rating buttons
+            document.querySelectorAll('.rating-btn').forEach(btn => {
+                btn.classList.remove('selected');
+            });
+        }
+
+        function setRating(rating) {
+            selectedRating = rating;
+            document.getElementById('progressRating').value = rating;
+            
+            // Update button styles
+            document.querySelectorAll('.rating-btn').forEach((btn, index) => {
+                if (index < rating) {
+                    btn.classList.add('selected');
+                } else {
+                    btn.classList.remove('selected');
+                }
+            });
+        }
+
+        async function logWorkout(event) {
+            event.preventDefault();
+
+            if (selectedRating === 0) {
+                alert('Please select a rating!');
+                return;
+            }
+
+            const progress = {
+                workoutId: document.getElementById('progressWorkout').value,
+                duration: parseInt(document.getElementById('progressDuration').value),
+                caloriesBurned: parseInt(document.getElementById('progressCalories').value) || 0,
+                date: document.getElementById('progressDate').value,
+                rating: selectedRating,
+                notes: document.getElementById('progressNotes').value
+            };
+
+            try {
+                const response = await fetch('/api/progress', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(progress)
+                });
+
+                if (response.ok) {
+                    alert('Workout logged successfully! 💪');
+                    hideLogForm();
+                    loadProgress();
+                } else {
+                    const data = await response.json();
+                    alert('Error: ' + (data.error || 'Failed to log workout'));
+                }
+            } catch (error) {
+                alert('Error: ' + error.message);
+            }
+        }
+
+        async function deleteProgress(id) {
+            if (!confirm('Delete this progress log?')) return;
+
+            try {
+                const response = await fetch(`/api/progress/${id}`, {
+                    method: 'DELETE'
+                });
+
+                if (response.ok) {
+                    alert('Progress log deleted!');
+                    loadProgress();
+                } else {
+                    alert('Error deleting log');
+                }
+            } catch (error) {
+                alert('Error: ' + error.message);
+            }
+        }
+
+        loadProgress();
+    </script>
+</body>
+</html>

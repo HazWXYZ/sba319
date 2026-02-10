@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Exercises - Workout Tracker</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container">
+            <h1 class="logo">Workout Tracker</h1>
+            <ul class="nav-links">
+                <li><a href="index.html">Home</a></li>
+                <li><a href="exercises.html" class="active">Exercises</a></li>
+                <li><a href="workouts.html">Workouts</a></li>
+                <li><a href="progress.html">Progress</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="page-header">
+            <h2>Exercise Database</h2>
+            <button class="btn btn-primary" onclick="showAddForm()">+ Add Exercise</button>
+        </div>
+
+        <div class="filters">
+            <select id="categoryFilter" onchange="filterExercises()">
+                <option value="">All Categories</option>
+                <option value="Strength">Strength</option>
+                <option value="Cardio">Cardio</option>
+                <option value="Flexibility">Flexibility</option>
+                <option value="Sports">Sports</option>
+            </select>
+
+            <select id="muscleFilter" onchange="filterExercises()">
+                <option value="">All Muscle Groups</option>
+                <option value="Chest">Chest</option>
+                <option value="Back">Back</option>
+                <option value="Legs">Legs</option>
+                <option value="Shoulders">Shoulders</option>
+                <option value="Arms">Arms</option>
+                <option value="Core">Core</option>
+                <option value="Full Body">Full Body</option>
+                <option value="Cardio">Cardio</option>
+            </select>
+
+            <select id="difficultyFilter" onchange="filterExercises()">
+                <option value="">All Difficulties</option>
+                <option value="Beginner">Beginner</option>
+                <option value="Intermediate">Intermediate</option>
+                <option value="Advanced">Advanced</option>
+            </select>
+        </div>
+
+        <!-- Add Exercise Form (hidden by default) -->
+        <div id="addExerciseForm" class="form-modal" style="display: none;">
+            <div class="form-content">
+                <h3>Add New Exercise</h3>
+                <form onsubmit="addExercise(event)">
+                    <div class="form-group">
+                        <label>Exercise Name *</label>
+                        <input type="text" id="exerciseName" required>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Category *</label>
+                            <select id="exerciseCategory" required>
+                                <option value="">Select...</option>
+                                <option value="Strength">Strength</option>
+                                <option value="Cardio">Cardio</option>
+                                <option value="Flexibility">Flexibility</option>
+                                <option value="Sports">Sports</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Muscle Group *</label>
+                            <select id="exerciseMuscle" required>
+                                <option value="">Select...</option>
+                                <option value="Chest">Chest</option>
+                                <option value="Back">Back</option>
+                                <option value="Legs">Legs</option>
+                                <option value="Shoulders">Shoulders</option>
+                                <option value="Arms">Arms</option>
+                                <option value="Core">Core</option>
+                                <option value="Full Body">Full Body</option>
+                                <option value="Cardio">Cardio</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Equipment</label>
+                            <select id="exerciseEquipment">
+                                <option value="Bodyweight">Bodyweight</option>
+                                <option value="Barbell">Barbell</option>
+                                <option value="Dumbbell">Dumbbell</option>
+                                <option value="Machine">Machine</option>
+                                <option value="Cardio Equipment">Cardio Equipment</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Difficulty</label>
+                            <select id="exerciseDifficulty">
+                                <option value="Beginner">Beginner</option>
+                                <option value="Intermediate">Intermediate</option>
+                                <option value="Advanced">Advanced</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Instructions</label>
+                        <textarea id="exerciseInstructions" rows="3"></textarea>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-secondary" onclick="hideAddForm()">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Add Exercise</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div id="exercisesList" class="exercises-grid">
+            <p class="loading">Loading exercises...</p>
+        </div>
+    </div>
+
+
+    <script src="app.js"></script>
+    <script>
+        let allExercises = [];
+
+        async function loadExercises() {
+            try {
+                const response = await fetch('/api/exercises');
+                const data = await response.json();
+                allExercises = data.data || [];
+                displayExercises(allExercises);
+            } catch (error) {
+                document.getElementById('exercisesList').innerHTML = 
+                    '<p class="error">Error loading exercises. Make sure the server is running.</p>';
+            }
+        }
+
+        function displayExercises(exercises) {
+            const list = document.getElementById('exercisesList');
+            
+            if (exercises.length === 0) {
+                list.innerHTML = '<p>No exercises found.</p>';
+                return;
+            }
+
+            list.innerHTML = exercises.map(ex => `
+                <div class="exercise-card">
+                    <div class="exercise-header">
+                        <h3>${ex.name}</h3>
+                        <span class="badge badge-${ex.difficulty.toLowerCase()}">${ex.difficulty}</span>
+                    </div>
+                    <p><strong>Category:</strong> ${ex.category}</p>
+                    <p><strong>Muscle:</strong> ${ex.muscleGroup}</p>
+                    <p><strong>Equipment:</strong> ${ex.equipment}</p>
+                    ${ex.instructions ? `<p class="instructions">${ex.instructions}</p>` : ''}
+                    <button class="btn btn-danger btn-sm" onclick="deleteExercise('${ex._id}')">Delete</button>
+                </div>
+            `).join('');
+        }
+
+        function filterExercises() {
+            const category = document.getElementById('categoryFilter').value;
+            const muscle = document.getElementById('muscleFilter').value;
+            const difficulty = document.getElementById('difficultyFilter').value;
+
+            let filtered = allExercises;
+
+            if (category) {
+                filtered = filtered.filter(ex => ex.category === category);
+            }
+            if (muscle) {
+                filtered = filtered.filter(ex => ex.muscleGroup === muscle);
+            }
+            if (difficulty) {
+                filtered = filtered.filter(ex => ex.difficulty === difficulty);
+            }
+
+            displayExercises(filtered);
+        }
+
+        function showAddForm() {
+            document.getElementById('addExerciseForm').style.display = 'flex';
+        }
+
+        function hideAddForm() {
+            document.getElementById('addExerciseForm').style.display = 'none';
+            document.querySelector('form').reset();
+        }
+
+        async function addExercise(event) {
+            event.preventDefault();
+
+            const exercise = {
+                name: document.getElementById('exerciseName').value,
+                category: document.getElementById('exerciseCategory').value,
+                muscleGroup: document.getElementById('exerciseMuscle').value,
+                equipment: document.getElementById('exerciseEquipment').value,
+                difficulty: document.getElementById('exerciseDifficulty').value,
+                instructions: document.getElementById('exerciseInstructions').value
+            };
+
+            try {
+                const response = await fetch('/api/exercises', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(exercise)
+                });
+
+                if (response.ok) {
+                    alert('Exercise added successfully!');
+                    hideAddForm();
+                    loadExercises();
+                } else {
+                    alert('Error adding exercise');
+                }
+            } catch (error) {
+                alert('Error: ' + error.message);
+            }
+        }
+
+        async function deleteExercise(id) {
+            if (!confirm('Delete this exercise?')) return;
+
+            try {
+                const response = await fetch(`/api/exercises/${id}`, {
+                    method: 'DELETE'
+                });
+
+                if (response.ok) {
+                    alert('Exercise deleted!');
+                    loadExercises();
+                } else {
+                    alert('Error deleting exercise');
+                }
+            } catch (error) {
+                alert('Error: ' + error.message);
+            }
+        }
+
+        loadExercises();
+    </script>
+</body>
+</html>

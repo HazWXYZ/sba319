@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Workouts - Workout Tracker</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container">
+            <h1 class="logo">Workout Tracker</h1>
+            <ul class="nav-links">
+                <li><a href="index.html">Home</a></li>
+                <li><a href="exercises.html">Exercises</a></li>
+                <li><a href="workouts.html" class="active">Workouts</a></li>
+                <li><a href="progress.html">Progress</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="page-header">
+            <h2>My Workouts</h2>
+            <button class="btn btn-primary" onclick="showAddWorkoutForm()">+ Create Workout</button>
+        </div>
+
+        <div class="filters">
+            <select id="difficultyFilter" onchange="filterWorkouts()">
+                <option value="">All Difficulties</option>
+                <option value="Beginner">Beginner</option>
+                <option value="Intermediate">Intermediate</option>
+                <option value="Advanced">Advanced</option>
+            </select>
+        </div>
+
+        <!-- Add Workout Form -->
+        <div id="addWorkoutForm" class="form-modal" style="display: none;">
+            <div class="form-content">
+                <h3>Create New Workout</h3>
+                <form onsubmit="addWorkout(event)">
+                    <div class="form-group">
+                        <label>Workout Name *</label>
+                        <input type="text" id="workoutName" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Description</label>
+                        <textarea id="workoutDescription" rows="2"></textarea>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Duration (minutes) *</label>
+                            <input type="number" id="workoutDuration" min="1" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Difficulty *</label>
+                            <select id="workoutDifficulty" required>
+                                <option value="Beginner">Beginner</option>
+                                <option value="Intermediate">Intermediate</option>
+                                <option value="Advanced">Advanced</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-secondary" onclick="hideAddWorkoutForm()">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Create Workout</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div id="workoutsList" class="workouts-grid">
+            <p class="loading">Loading workouts...</p>
+        </div>
+    </div>
+
+
+    <script src="app.js"></script>
+    <script>
+        let allWorkouts = [];
+
+        async function loadWorkouts() {
+            try {
+                const response = await fetch('/api/workouts');
+                const data = await response.json();
+                allWorkouts = data.data || [];
+                displayWorkouts(allWorkouts);
+            } catch (error) {
+                document.getElementById('workoutsList').innerHTML = 
+                    '<p class="error">Error loading workouts.</p>';
+            }
+        }
+
+        function displayWorkouts(workouts) {
+            const list = document.getElementById('workoutsList');
+            
+            if (workouts.length === 0) {
+                list.innerHTML = '<p>No workouts found. Create your first workout!</p>';
+                return;
+            }
+
+            list.innerHTML = workouts.map(w => {
+                const exerciseCount = w.exercises?.length || 0;
+                const muscles = w.targetMuscles?.join(', ') || 'N/A';
+                
+                return `
+                    <div class="workout-card">
+                        <div class="workout-header">
+                            <h3>${w.name}</h3>
+                            <span class="badge badge-${w.difficulty.toLowerCase()}">${w.difficulty}</span>
+                        </div>
+                        ${w.description ? `<p class="description">${w.description}</p>` : ''}
+                        <div class="workout-info">
+                            <p>⏱️ ${w.duration} minutes</p>
+                            <p>💪 ${exerciseCount} exercises</p>
+                            <p>🎯 ${muscles}</p>
+                        </div>
+                        <div class="workout-actions">
+                            <button class="btn btn-success btn-sm" onclick="viewWorkout('${w._id}')">View Details</button>
+                            <button class="btn btn-danger btn-sm" onclick="deleteWorkout('${w._id}')">Delete</button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function filterWorkouts() {
+            const difficulty = document.getElementById('difficultyFilter').value;
+            
+            let filtered = allWorkouts;
+            if (difficulty) {
+                filtered = filtered.filter(w => w.difficulty === difficulty);
+            }
+            
+            displayWorkouts(filtered);
+        }
+
+        function showAddWorkoutForm() {
+            document.getElementById('addWorkoutForm').style.display = 'flex';
+        }
+
+        function hideAddWorkoutForm() {
+            document.getElementById('addWorkoutForm').style.display = 'none';
+            document.querySelector('form').reset();
+        }
+
+        async function addWorkout(event) {
+            event.preventDefault();
+
+            const workout = {
+                name: document.getElementById('workoutName').value,
+                description: document.getElementById('workoutDescription').value,
+                duration: parseInt(document.getElementById('workoutDuration').value),
+                difficulty: document.getElementById('workoutDifficulty').value,
+                exercises: [], // Simplified - not adding exercises in this form
+                targetMuscles: []
+            };
+
+            try {
+                const response = await fetch('/api/workouts', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(workout)
+                });
+
+                if (response.ok) {
+                    alert('Workout created successfully!');
+                    hideAddWorkoutForm();
+                    loadWorkouts();
+                } else {
+                    alert('Error creating workout');
+                }
+            } catch (error) {
+                alert('Error: ' + error.message);
+            }
+        }
+
+        async function viewWorkout(id) {
+            try {
+                const response = await fetch(`/api/workouts/${id}`);
+                const data = await response.json();
+                const workout = data.data;
+
+                let details = `Workout: ${workout.name}\n\n`;
+                details += `Duration: ${workout.duration} minutes\n`;
+                details += `Difficulty: ${workout.difficulty}\n\n`;
+                
+                if (workout.exercises && workout.exercises.length > 0) {
+                    details += 'Exercises:\n';
+                    workout.exercises.forEach((ex, i) => {
+                        const name = ex.exerciseId?.name || 'Exercise';
+                        details += `${i + 1}. ${name} - ${ex.sets} sets x ${ex.reps} reps`;
+                        if (ex.weight > 0) details += ` @ ${ex.weight} lbs`;
+                        details += '\n';
+                    });
+                } else {
+                    details += 'No exercises added yet.';
+                }
+
+                alert(details);
+            } catch (error) {
+                alert('Error loading workout details');
+            }
+        }
+
+        async function deleteWorkout(id) {
+            if (!confirm('Delete this workout?')) return;
+
+            try {
+                const response = await fetch(`/api/workouts/${id}`, {
+                    method: 'DELETE'
+                });
+
+                if (response.ok) {
+                    alert('Workout deleted!');
+                    loadWorkouts();
+                } else {
+                    alert('Error deleting workout');
+                }
+            } catch (error) {
+                alert('Error: ' + error.message);
+            }
+        }
+
+        loadWorkouts();
+    </script>
+</body>
+</html>

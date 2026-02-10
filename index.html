@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Workout Tracker</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container">
+            <h1 class="logo">Workout Tracker</h1>
+            <ul class="nav-links">
+                <li><a href="index.html" class="active">Home</a></li>
+                <li><a href="exercises.html">Exercises</a></li>
+                <li><a href="workouts.html">Workouts</a></li>
+                <li><a href="progress.html">Progress</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="container">
+        <section class="hero">
+            <h2>Welcome to Your Fitness Journey</h2>
+            <p>Track exercises, build workouts, and monitor your progress all in one place.</p>
+        </section>
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <h3 id="exerciseCount">0</h3>
+                <p>Exercises Available</p>
+            </div>
+            <div class="stat-card">
+                <h3 id="workoutCount">0</h3>
+                <p>Workout Routines</p>
+            </div>
+            <div class="stat-card">
+                <h3 id="progressCount">0</h3>
+                <p>Workouts Logged</p>
+            </div>
+        </div>
+
+        <section class="recent-section">
+            <h2>Recent Activity</h2>
+            <div id="recentProgress" class="progress-list">
+                <p class="loading">Loading recent workouts...</p>
+            </div>
+        </section>
+
+        <section class="quick-actions">
+            <h2>Quick Actions</h2>
+            <div class="action-buttons">
+                <a href="exercises.html" class="btn btn-primary">Browse Exercises</a>
+                <a href="workouts.html" class="btn btn-primary">View Workouts</a>
+                <a href="progress.html" class="btn btn-success">Log Workout</a>
+            </div>
+        </section>
+    </div>
+
+
+
+    <script src="app.js"></script>
+    <script>
+        // Load dashboard stats
+        async function loadDashboard() {
+            try {
+                // Get counts
+                const exercises = await fetch('/api/exercises').then(r => r.json());
+                const workouts = await fetch('/api/workouts').then(r => r.json());
+                const progress = await fetch('/api/progress').then(r => r.json());
+
+                document.getElementById('exerciseCount').textContent = exercises.count || 0;
+                document.getElementById('workoutCount').textContent = workouts.count || 0;
+                document.getElementById('progressCount').textContent = progress.count || 0;
+
+                // Show recent progress
+                const recentDiv = document.getElementById('recentProgress');
+                if (progress.data && progress.data.length > 0) {
+                    const recent = progress.data.slice(0, 5);
+                    recentDiv.innerHTML = recent.map(p => {
+                        const date = new Date(p.date).toLocaleDateString();
+                        const workoutName = p.workoutId?.name || 'Unknown Workout';
+                        return `
+                            <div class="progress-item">
+                                <div>
+                                    <strong>${workoutName}</strong>
+                                    <span class="date">${date}</span>
+                                </div>
+                                <div>
+                                    <span class="badge">${p.duration} min</span>
+                                    <span class="rating">${'⭐'.repeat(p.rating)}</span>
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+                } else {
+                    recentDiv.innerHTML = '<p>No workouts logged yet. Start tracking your progress!</p>';
+                }
+            } catch (error) {
+                console.error('Error loading dashboard:', error);
+            }
+        }
+
+        loadDashboard();
+    </script>
+</body>
+</html>
